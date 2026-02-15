@@ -54,7 +54,13 @@ class KtorService : Service() {
         super.onCreate()
         acquireWakeLock()
         startForeground(NOTIFICATION_ID, buildNotification())
-        startServer()
+        try {
+            startServer()
+        } catch (e: Exception) {
+            releaseWakeLock()
+            stopSelf()
+            return
+        }
         rescheduleAlarms()
     }
 
@@ -111,6 +117,13 @@ class KtorService : Service() {
                 post("/set") {
                     try {
                         val req = call.receive<SetAlarmRequest>()
+                        if (req.hour !in 0..23 || req.minute !in 0..59) {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse("hour must be 0-23, minute must be 0-59")
+                            )
+                            return@post
+                        }
                         val id = UUID.randomUUID().toString()
 
                         val now = Calendar.getInstance()
