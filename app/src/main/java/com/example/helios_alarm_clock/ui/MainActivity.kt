@@ -55,7 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
+import java.util.Locale
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.helios_alarm_clock.data.AlarmEntity
@@ -262,6 +265,17 @@ fun AlarmCard(
                     fontWeight = FontWeight.Light,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                if (!alarm.date.isNullOrBlank()) {
+                    val formattedDate = runCatching {
+                        val parsed = LocalDate.parse(alarm.date, DateTimeFormatter.ISO_LOCAL_DATE)
+                        parsed.format(DateTimeFormatter.ofPattern("EEE, dd.MM.yyyy", Locale.GERMAN))
+                    }.getOrElse { alarm.date }
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 if (alarm.label.isNotBlank()) {
                     Text(
                         text = alarm.label,
