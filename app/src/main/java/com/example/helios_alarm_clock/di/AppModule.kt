@@ -22,7 +22,9 @@ object AppModule {
             context,
             AlarmDatabase::class.java,
             AlarmDatabase.NAME
-        ).build()
+        )
+            .addMigrations(AlarmDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     @Singleton

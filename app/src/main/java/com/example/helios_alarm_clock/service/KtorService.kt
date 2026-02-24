@@ -36,6 +36,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.UUID
 import javax.inject.Inject
@@ -126,13 +129,40 @@ class KtorService : Service() {
                         }
                         val id = UUID.randomUUID().toString()
 
+                        // Parse date outside apply block so return@post works at the correct scope
+                        val parsedDate: LocalDate? = if (req.date != null) {
+                            try {
+                                LocalDate.parse(req.date, DateTimeFormatter.ISO_LOCAL_DATE)
+                            } catch (e: DateTimeParseException) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    ErrorResponse("date must be in YYYY-MM-DD format (e.g. 2026-10-08)")
+                                )
+                                return@post
+                            }
+                        } else null
+
                         val now = Calendar.getInstance()
                         val trigger = Calendar.getInstance().apply {
                             set(Calendar.HOUR_OF_DAY, req.hour)
                             set(Calendar.MINUTE, req.minute)
                             set(Calendar.SECOND, 0)
                             set(Calendar.MILLISECOND, 0)
-                            if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
+                            if (parsedDate != null) {
+                                set(Calendar.YEAR, parsedDate.year)
+                                set(Calendar.MONTH, parsedDate.monthValue - 1)
+                                set(Calendar.DAY_OF_MONTH, parsedDate.dayOfMonth)
+                            } else {
+                                if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
+                            }
+                        }
+
+                        if (parsedDate != null && trigger.before(now)) {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse("Alarm time is in the past")
+                            )
+                            return@post
                         }
 
                         val entity = AlarmEntity(
@@ -140,7 +170,8 @@ class KtorService : Service() {
                             hour = req.hour,
                             minute = req.minute,
                             label = req.label,
-                            triggerTimeMillis = trigger.timeInMillis
+                            triggerTimeMillis = trigger.timeInMillis,
+                            date = req.date
                         )
 
                         alarmDao.insert(entity)
@@ -241,7 +272,7 @@ class KtorService : Service() {
 }
 
 @Serializable
-data class SetAlarmRequest(val hour: Int, val minute: Int, val label: String = "")
+data class SetAlarmRequest(val hour: Int, val minute: Int, val label: String = "", val date: String? = null)
 
 @Serializable
 data class RemoveAlarmRequest(val id: String)

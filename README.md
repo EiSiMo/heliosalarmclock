@@ -31,6 +31,14 @@ Response: `201 Created`
 
 `hour` must be 0-23, `minute` must be 0-59. `label` is optional (defaults to empty).
 
+To set an alarm for a specific future date, add an optional `date` field in `YYYY-MM-DD` format. Without `date`, the alarm fires at the next occurrence of the given time (today or tomorrow).
+
+```bash
+curl -X POST http://PHONE_IP:8080/set \
+  -H "Content-Type: application/json" \
+  -d '{"hour": 8, "minute": 0, "label": "Vacation start", "date": "2026-10-08"}'
+```
+
 ### Remove an alarm
 
 ```bash

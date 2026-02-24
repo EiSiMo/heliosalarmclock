@@ -30,7 +30,7 @@ class MainViewModel @Inject constructor(
 
     val port: Int = KtorService.PORT
 
-    fun createAlarm(hour: Int, minute: Int, label: String) {
+    fun createAlarm(hour: Int, minute: Int, label: String, date: String? = null) {
         viewModelScope.launch {
             val now = Calendar.getInstance()
             val trigger = Calendar.getInstance().apply {
@@ -38,14 +38,22 @@ class MainViewModel @Inject constructor(
                 set(Calendar.MINUTE, minute)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
-                if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
+                if (date != null) {
+                    val parsedDate = java.time.LocalDate.parse(date)
+                    set(Calendar.YEAR, parsedDate.year)
+                    set(Calendar.MONTH, parsedDate.monthValue - 1)
+                    set(Calendar.DAY_OF_MONTH, parsedDate.dayOfMonth)
+                } else {
+                    if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
+                }
             }
             val entity = AlarmEntity(
                 id = UUID.randomUUID().toString(),
                 hour = hour,
                 minute = minute,
                 label = label,
-                triggerTimeMillis = trigger.timeInMillis
+                triggerTimeMillis = trigger.timeInMillis,
+                date = date
             )
             alarmDao.insert(entity)
             alarmScheduler.schedule(entity)
